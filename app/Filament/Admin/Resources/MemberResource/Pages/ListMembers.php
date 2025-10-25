@@ -17,4 +17,11 @@ class ListMembers extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            MemberOverview::class,
+        ];
+    }
 }
