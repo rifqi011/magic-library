@@ -21,5 +21,9 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('123456789'),
             'role' => 'superadmin'
         ]);
+
+        $this->call([
+            MemberSeeder::class
+        ]);
     }
 }
