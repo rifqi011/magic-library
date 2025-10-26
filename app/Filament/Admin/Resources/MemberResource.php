@@ -126,6 +126,8 @@ class MemberResource extends Resource
                             ->imageEditor()
                             ->directory('members')
                             ->maxSize(2048)
+                            ->disk('public')
+                            ->visibility('public')
                             ->nullable(),
                     ])
                     ->columns(1),
