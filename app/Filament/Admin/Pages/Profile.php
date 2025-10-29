@@ -20,7 +20,6 @@ class Profile extends Page implements Forms\Contracts\HasForms
     protected static ?string $title = 'My Profile';
     protected static string $view = 'filament.admin.pages.profile';
     protected static ?string $navigationGroup = 'Account';
-    protected static bool $shouldRegisterNavigation = false;
 
     // Public properties untuk form fields
     public $avatar = null;
