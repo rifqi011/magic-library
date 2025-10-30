@@ -32,9 +32,4 @@ class Book extends Model
     {
         return $this->belongsToMany(Genre::class, 'book_genre');
     }
-
-    public function creator()
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
 }
