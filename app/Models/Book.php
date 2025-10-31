@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Book extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'created_by',
         'category_id',
+        'slug',
         'title',
         'author',
         'publisher',
@@ -23,6 +24,11 @@ class Book extends Model
         'synopsis'
     ];
 
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -31,5 +37,29 @@ class Book extends Model
     public function genres()
     {
         return $this->belongsToMany(Genre::class, 'book_genre');
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $slug = Str::slug($model->name);
+            $originalSlug = $slug;
+            $count = 1;
+
+            while (static::where('slug', $slug)->exists()) {
+                $slug = "{$originalSlug}-{$count}";
+                $count++;
+            }
+
+            $model->slug = $slug;
+        });
+
+        static::updating(function ($model) {
+            if ($model->isDirty('name')) {
+                $model->slug = Str::slug($model->name);
+            }
+        });
     }
 }
