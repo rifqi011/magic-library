@@ -43,6 +43,15 @@ jobs:
       - name: Generate Application Key
         run: php artisan key:generate
 
+      - name: Set Permissions
+        run: chmod -R 777 storage bootstrap/cache
+
+      - name: Optimize Laravel
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
       - name: Build Assets
         run: npm run build
 
