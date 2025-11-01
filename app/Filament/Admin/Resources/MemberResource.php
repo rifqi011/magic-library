@@ -82,16 +82,6 @@ class MemberResource extends Resource
                             ->native(false)
                             ->default(now())
                             ->displayFormat('d/m/Y'),
-
-                        Forms\Components\Select::make('status')
-                            ->label('Status')
-                            ->required()
-                            ->options([
-                                'active' => 'Active',
-                                'inactive' => 'Inactive',
-                            ])
-                            ->default('active')
-                            ->native(false),
                     ])
                     ->columns(2),
 
