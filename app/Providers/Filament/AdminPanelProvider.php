@@ -36,6 +36,11 @@ class AdminPanelProvider extends PanelProvider
                     ->icon('heroicon-o-user')
                     ->url(fn(): string => route('filament.admin.pages.profile')),
             ])
+            ->navigationGroups([
+                'Library Catalog',
+                'Members',
+                'User Management',
+            ])
             ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\\Filament\\Admin\\Resources')
             ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\\Filament\\Admin\\Pages')
             ->pages([
