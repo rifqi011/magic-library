@@ -2,9 +2,10 @@
 
 namespace App\Filament\Admin\Resources\BookResource\Pages;
 
-use App\Filament\Admin\Resources\BookResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use App\Filament\Admin\Resources\BookResource;
+use App\Filament\Admin\Resources\BookResource\Widgets\BookOverview;
 
 class ListBooks extends ListRecords
 {
@@ -14,6 +15,13 @@ class ListBooks extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            BookOverview::class,
         ];
     }
 }
