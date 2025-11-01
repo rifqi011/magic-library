@@ -11,37 +11,32 @@ class MemberOverview extends BaseWidget
 {
     protected function getStats(): array
     {
-        // Get current month and previous month data
-        $currentMonth = Member::whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
+        $currentMonth = Member::whereMonth('join_date', Carbon::now()->month)
+            ->whereYear('join_date', Carbon::now()->year)
             ->count();
 
-        $previousMonth = Member::whereMonth('created_at', Carbon::now()->subMonth()->month)
-            ->whereYear('created_at', Carbon::now()->subMonth()->year)
+        $previousMonth = Member::whereMonth('join_date', Carbon::now()->subMonth()->month)
+            ->whereYear('join_date', Carbon::now()->subMonth()->year)
             ->count();
 
-        // Calculate difference in number of people
         $totalDifference = $currentMonth - $previousMonth;
         $totalChangeDirection = $totalDifference >= 0 ? 'increase' : 'decrease';
 
-        // Get active members data
         $activeCount = Member::where('status', 'active')->count();
 
         $activeThisMonth = Member::where('status', 'active')
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('join_date', Carbon::now()->month)
+            ->whereYear('join_date', Carbon::now()->year)
             ->count();
 
         $activePreviousMonth = Member::where('status', 'active')
-            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
-            ->whereYear('created_at', Carbon::now()->subMonth()->year)
+            ->whereMonth('join_date', Carbon::now()->subMonth()->month)
+            ->whereYear('join_date', Carbon::now()->subMonth()->year)
             ->count();
 
-        // Calculate difference in number of people
         $activeDifference = $activeThisMonth - $activePreviousMonth;
         $activeChangeDirection = $activeDifference >= 0 ? 'increase' : 'decrease';
 
-        // Get inactive members data
         $inactiveCount = Member::where('status', 'inactive')->count();
 
         $inactiveThisMonth = Member::where('status', 'inactive')
@@ -57,7 +52,6 @@ class MemberOverview extends BaseWidget
         $inactiveDifference = $inactiveThisMonth - $inactivePreviousMonth;
         $inactiveChangeDirection = $inactiveDifference >= 0 ? 'increase' : 'decrease';
 
-        // Get chart data for last 7 days (only for total)
         $chartData = $this->getChartData();
 
         return [
@@ -88,7 +82,7 @@ class MemberOverview extends BaseWidget
                         ' from last month'
                 )
                 ->descriptionIcon($inactiveChangeDirection === 'increase' ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
-                ->color($inactiveChangeDirection === 'increase' ? 'danger' : 'success'), // Reversed: more inactive is bad
+                ->color($inactiveChangeDirection === 'increase' ? 'danger' : 'success'), // lebih banyak inactive = buruk
         ];
     }
 
@@ -100,8 +94,7 @@ class MemberOverview extends BaseWidget
         for ($i = $days - 1; $i >= 0; $i--) {
             $date = Carbon::now()->subDays($i);
 
-            // Total members registered on this day
-            $data[] = Member::whereDate('created_at', $date->format('Y-m-d'))->count();
+            $data[] = Member::whereDate('join_date', $date->format('Y-m-d'))->count();
         }
 
         return $data;
