@@ -64,6 +64,15 @@ class User extends Authenticatable
         });
     }
 
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function isSuperAdmin()
+    {
+        return $this->role === 'superadmin';
+    }
 
     public function getAvatarUrlAttribute()
     {
