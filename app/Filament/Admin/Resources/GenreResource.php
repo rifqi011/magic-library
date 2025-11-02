@@ -38,36 +38,36 @@ class GenreResource extends Resource
     {
         return $form
             ->schema([
-            Forms\Components\TextInput::make('name')
-                ->label('Name')
-                ->required()
-                ->maxLength(255)
-                ->live(onBlur: true)
-                ->afterStateUpdated(function (string $state, Forms\Set $set) {
-                    $set('slug', Str::slug($state));
-                }),
+                Forms\Components\TextInput::make('name')
+                    ->label('Name')
+                    ->required()
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (string $state, Forms\Set $set) {
+                        $set('slug', Str::slug($state));
+                    }),
 
-            Forms\Components\TextInput::make('slug')
-                ->label('Slug')
-                ->readOnly()
-                ->maxLength(255)
-                ->unique(ignoreRecord: true)
-                ->dehydrated(),
+                Forms\Components\TextInput::make('slug')
+                    ->label('Slug')
+                    ->readOnly()
+                    ->maxLength(255)
+                    ->unique(ignoreRecord: true)
+                    ->dehydrated(),
 
-            Forms\Components\TextInput::make('description')
-                ->required()
-                ->maxLength(255),
+                Forms\Components\TextInput::make('description')
+                    ->required()
+                    ->maxLength(255),
 
-            Forms\Components\Select::make('status')
-                ->options([
-                    'active' => 'Active',
-                    'inactive' => 'Inactive',
-                ])
-                ->required()
-                ->default('active')
-                ->native(false)
+                Forms\Components\Select::make('status')
+                    ->options([
+                        'active' => 'Active',
+                        'inactive' => 'Inactive',
+                    ])
+                    ->required()
+                    ->default('active')
+                    ->native(false)
 
-        ]);
+            ]);
     }
 
     public static function table(Table $table): Table
@@ -91,7 +91,12 @@ class GenreResource extends Resource
                 TernaryFilter::make('status')
                     ->trueLabel('Active')
                     ->falseLabel('Inactive')
-                    ->native()
+                    ->queries(
+                        true: fn(Builder $query) => $query->where('status', 'active'),
+                        false: fn(Builder $query) => $query->where('status', 'inactive'),
+                        blank: fn(Builder $query) => $query
+                    )
+                    ->native(false)
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

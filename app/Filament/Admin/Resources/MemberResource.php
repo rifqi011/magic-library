@@ -164,7 +164,12 @@ class MemberResource extends Resource
                 TernaryFilter::make('status')
                     ->trueLabel('Active')
                     ->falseLabel('Inactive')
-                    ->native()
+                    ->queries(
+                        true: fn(Builder $query) => $query->where('status', 'active'),
+                        false: fn(Builder $query) => $query->where('status', 'inactive'),
+                        blank: fn(Builder $query) => $query
+                    )
+                    ->native(false)
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
