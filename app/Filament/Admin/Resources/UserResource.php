@@ -5,6 +5,9 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\UserResource\Pages;
 use App\Filament\Admin\Resources\UserResource\RelationManagers;
 use App\Models\User;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Illuminate\Support\Collection;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -147,15 +150,75 @@ class UserResource extends Resource
                     ->falseLabel('Admin'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make()
-                    ->visible(fn($record) => $record->id !== auth()->id()),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make()
+                        ->visible(function ($record) {
+                            $authUser = auth()->user();
+
+                            if ($record->id === $authUser->id) {
+                                return false;
+                            }
+
+                            if ($record->role === 'superadmin') {
+                                return false;
+                            }
+
+                            if ($record->members()->exists()) {
+                                return false;
+                            }
+
+                            return true;
+                        }),
+                ])
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                DeleteBulkAction::make()
+                    ->action(function (Collection $records) {
+                        $currentUser = auth()->user();
+
+                        // Filter records that are allowed to be deleted
+                        $allowed = $records->filter(
+                            fn($record) =>
+                            $record->id !== $currentUser->id &&
+                                $record->role !== 'superadmin' &&
+                                !$record->members()->exists()
+                        );
+
+                        $blocked = $records->diff($allowed);
+
+                        if ($allowed->isEmpty()) {
+                            Notification::make()
+                                ->title('Action Cancelled')
+                                ->body('No users can be deleted. Users with related members, super admins, or your own account cannot be deleted.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        // Delete only allowed records
+                        $deleted = 0;
+                        foreach ($allowed as $record) {
+                            $record->delete();
+                            $deleted++;
+                        }
+
+                        if ($blocked->isNotEmpty()) {
+                            Notification::make()
+                                ->title('Partial Success')
+                                ->body("Successfully deleted {$deleted} user(s). Some users could not be deleted: " . $blocked->pluck('name')->join(', '))
+                                ->warning()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Success')
+                                ->body("Successfully deleted {$deleted} user(s).")
+                                ->success()
+                                ->send();
+                        }
+                    })
             ]);
     }
 
@@ -172,6 +235,7 @@ class UserResource extends Resource
             'index' => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
+            'view' => Pages\ViewUser::route('/{record}')
         ];
     }
 }

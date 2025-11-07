@@ -13,7 +13,24 @@ class EditUser extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->visible(function ($record) {
+                    $authUser = auth()->user();
+
+                    if ($record->id === $authUser->id) {
+                        return false;
+                    }
+
+                    if ($record->role === 'superadmin') {
+                        return false;
+                    }
+
+                    if ($record->members()->exists()) {
+                        return false;
+                    }
+
+                    return true;
+                }),
         ];
     }
 
