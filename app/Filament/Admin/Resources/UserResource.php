@@ -147,7 +147,12 @@ class UserResource extends Resource
 
                 Tables\Filters\TernaryFilter::make('role')
                     ->trueLabel('Super Admin')
-                    ->falseLabel('Admin'),
+                    ->falseLabel('Admin')
+                    ->queries(
+                        true: fn(Builder $query) => $query->where('role', 'superadmin'),
+                        false: fn(Builder $query) => $query->where('role', 'admin'),
+                        blank: fn(Builder $query) => $query
+                    ),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
