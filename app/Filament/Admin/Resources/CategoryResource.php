@@ -11,6 +11,8 @@ use Illuminate\Support\Str;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -90,12 +92,55 @@ class CategoryResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(function ($record) {
+                        if ($record->books()->exists()) {
+                            return false;
+                        }
+
+                        return true;
+                    }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->action(function (Collection $records) {
+                        // Filter records that are allowed to be deleted
+                        $allowed = $records->filter(
+                            fn($record) => !$record->books()->exists()
+                        );
+
+                        $blocked = $records->diff($allowed);
+
+                        if ($allowed->isEmpty()) {
+                            Notification::make()
+                                ->title('Action Cancelled')
+                                ->body('No categories can be deleted. Categories with related books cannot be deleted.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        $deleted = 0;
+                        foreach ($allowed as $record) {
+                            $record->delete();
+                            $deleted++;
+                        }
+
+                        if ($blocked->isNotEmpty()) {
+                            Notification::make()
+                                ->title('Partial Success')
+                                ->body("Successfully deleted {$deleted} category(ies). Some categories could not be deleted: " . $blocked->pluck('name')->join(', '))
+                                ->warning()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Success')
+                                ->body("Successfully deleted {$deleted} category(ies).")
+                                ->success()
+                                ->send();
+                        }
+                    }),
             ]);
     }
 
