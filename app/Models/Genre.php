@@ -16,6 +16,11 @@ class Genre extends Model
         'status'
     ];
 
+    public function books()
+    {
+        return $this->belongsToMany(Book::class, 'book_genre');
+    }
+
     protected static function boot()
     {
         parent::boot();

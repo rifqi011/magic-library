@@ -16,6 +16,8 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Notifications\Notification;
+use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Actions\BulkActionGroup;
@@ -101,12 +103,58 @@ class GenreResource extends Resource
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(function ($record) {
+                        if ($record->books()->exists()) {
+                            return false;
+                        }
+
+                        return true;
+                    }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->action(function (Collection $records) {
+                        // Filter genres that are allowed to be deleted (no related books in pivot table)
+                        $allowed = $records->filter(
+                            fn($record) => !$record->books()->exists()
+                        );
+
+                        $blocked = $records->diff($allowed);
+
+                        // If none can be deleted
+                        if ($allowed->isEmpty()) {
+                            Notification::make()
+                                ->title('Action Cancelled')
+                                ->body('No genres can be deleted. Genres with related books cannot be deleted.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        // Delete only allowed records
+                        $deleted = 0;
+                        foreach ($allowed as $record) {
+                            $record->delete();
+                            $deleted++;
+                        }
+
+                        // Show notification for blocked records
+                        if ($blocked->isNotEmpty()) {
+                            Notification::make()
+                                ->title('Partial Success')
+                                ->body("Successfully deleted {$deleted} genre(s). Some genres could not be deleted: " . $blocked->pluck('name')->join(', '))
+                                ->warning()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Success')
+                                ->body("Successfully deleted {$deleted} genre(s).")
+                                ->success()
+                                ->send();
+                        }
+                    }),
             ]);
     }
 
