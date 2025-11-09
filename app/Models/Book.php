@@ -39,6 +39,26 @@ class Book extends Model
         return $this->belongsToMany(Genre::class, 'book_genre');
     }
 
+    public function borrowingDetails()
+    {
+        return $this->hasMany(BorrowingDetail::class);
+    }
+
+    public function bookHistories()
+    {
+        return $this->hasMany(BookHistory::class);
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->stock > 0;
+    }
+
+    public function scopeAvailable($query)
+    {
+        return $query->where('stock', '>', 0);
+    }
+
     protected static function boot()
     {
         parent::boot();
