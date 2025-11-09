@@ -153,11 +153,6 @@ class BorrowingResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable()
-                    ->searchable(),
-
                 Tables\Columns\TextColumn::make('member.name')
                     ->label('Member')
                     ->searchable()
