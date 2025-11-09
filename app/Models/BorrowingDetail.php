@@ -20,15 +20,20 @@ class BorrowingDetail extends Model
 
         static::created(function ($detail) {
             // Decrease stock when borrowing detail is created
-            $book = $detail->book;
-            if ($book && $book->stock >= $detail->quantity) {
-                $book->decrement('stock', $detail->quantity);
+            $borrowing = $detail->borrowing;
+            // Only decrease if borrowing exists and not returned
+            if ($borrowing && $borrowing->status !== 'returned') {
+                $book = $detail->book;
+                if ($book && $book->stock >= $detail->quantity) {
+                    $book->decrement('stock', $detail->quantity);
+                }
             }
         });
 
-        static::deleted(function ($detail) {
-            // Only return stock if borrowing is not returned yet
+        static::deleting(function ($detail) {
+            // Return stock when detail is deleted
             $borrowing = $detail->borrowing;
+            // Only return stock if borrowing is not returned yet
             if ($borrowing && $borrowing->status !== 'returned') {
                 $book = $detail->book;
                 if ($book) {
@@ -37,7 +42,7 @@ class BorrowingDetail extends Model
             }
         });
 
-        static::updated(function ($detail) {
+        static::updating(function ($detail) {
             if ($detail->isDirty('quantity')) {
                 $book = $detail->book;
                 $borrowing = $detail->borrowing;
@@ -49,7 +54,9 @@ class BorrowingDetail extends Model
 
                     if ($difference > 0) {
                         // Increased quantity - decrease stock
-                        $book->decrement('stock', $difference);
+                        if ($book->stock >= $difference) {
+                            $book->decrement('stock', $difference);
+                        }
                     } else {
                         // Decreased quantity - increase stock
                         $book->increment('stock', abs($difference));

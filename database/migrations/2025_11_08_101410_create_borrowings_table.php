@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->foreignId('member_id')->constrained('members')->onDelete('cascade');
             $table->date('borrow_date');
+            $table->date('due_date');
             $table->date('return_date')->nullable();
             $table->enum('status', ['borrowed', 'returned', 'late'])->default('borrowed');
             $table->decimal('fine', 10, 2)->default(0);

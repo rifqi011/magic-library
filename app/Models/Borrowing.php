@@ -40,9 +40,21 @@ class Borrowing extends Model
         });
 
         static::updating(function ($borrowing) {
-            // Calculate fine
+            // Calculate fine if status changes to late or returned
             if ($borrowing->isDirty('status') || $borrowing->isDirty('return_date')) {
                 $borrowing->calculateFine();
+            }
+        });
+
+        static::deleting(function ($borrowing) {
+            // Return stock when borrowing is deleted (only if not returned yet)
+            if ($borrowing->status !== 'returned') {
+                foreach ($borrowing->borrowingDetails as $detail) {
+                    $book = $detail->book;
+                    if ($book) {
+                        $book->increment('stock', $detail->quantity);
+                    }
+                }
             }
         });
     }
@@ -114,16 +126,5 @@ class Borrowing extends Model
                 ]);
             }
         });
-    }
-
-    public function updateBookStock(): void
-    {
-        // Decrease stock when borrowing
-        foreach ($this->borrowingDetails as $detail) {
-            $book = $detail->book;
-            if ($book->stock >= $detail->quantity) {
-                $book->decrement('stock', $detail->quantity);
-            }
-        }
     }
 }
