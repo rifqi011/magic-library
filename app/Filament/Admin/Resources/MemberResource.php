@@ -2,22 +2,24 @@
 
 namespace App\Filament\Admin\Resources;
 
-use App\Filament\Admin\Resources\MemberResource\Pages;
-use App\Filament\Admin\Resources\MemberResource\RelationManagers;
-use App\Models\Member;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\ViewAction;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use App\Models\Member;
+use Filament\Forms\Form;
+use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Illuminate\Support\Collection;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\TernaryFilter;
-use Filament\Tables\Table;
+use Filament\Tables\Actions\DeleteAction;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Filters\TernaryFilter;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Admin\Resources\MemberResource\Pages;
+use App\Filament\Admin\Resources\MemberResource\RelationManagers;
 
 class MemberResource extends Resource
 {
@@ -173,16 +175,62 @@ class MemberResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-
                     Tables\Actions\EditAction::make(),
                     ViewAction::make(),
                     DeleteAction::make()
+                        ->visible(
+                            function ($record) {
+                                if ($record->borrowings()->exists()) {
+                                    return false;
+                                } else {
+                                    return true;
+                                }
+                            }
+                        )
                 ])
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make()
+                    ->action(function (Collection $records) {
+                        $allowed = $records->filter(
+                            fn($record) => !$record->borrowings()->exists()
+                        );
+
+                        $blocked = $records->diff($allowed);
+
+                        // If none can be deleted
+                        if ($allowed->isEmpty()) {
+                            Notification::make()
+                                ->title('Action Cancelled')
+                                ->body('No members can be deleted. Members with related borrowings cannot be deleted.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        // Delete only allowed records
+                        $deleted = 0;
+                        foreach ($allowed as $record) {
+                            $record->delete();
+                            $deleted++;
+                        }
+
+                        // Show notification for blocked records
+                        if ($blocked->isNotEmpty()) {
+                            Notification::make()
+                                ->title('Partial Success')
+                                ->body("Successfully deleted {$deleted} member(s). Some members could not be deleted: " . $blocked->pluck('name')->join(', '))
+                                ->warning()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Success')
+                                ->body("Successfully deleted {$deleted} member(s).")
+                                ->success()
+                                ->send();
+                        }
+                    }),
             ]);
     }
 

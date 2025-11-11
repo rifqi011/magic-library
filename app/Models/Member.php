@@ -54,4 +54,9 @@ class Member extends Model
     {
         return 'member_code';
     }
+
+    public function borrowings()
+    {
+        return $this->hasMany(Borrowing::class);
+    }
 }

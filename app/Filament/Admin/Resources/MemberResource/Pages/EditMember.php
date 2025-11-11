@@ -13,7 +13,16 @@ class EditMember extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->visible(
+                    function ($record) {
+                        if ($record->borrowings()->exists()) {
+                            return false;
+                        } else {
+                            return true;
+                        }
+                    }
+                ),
         ];
     }
 
