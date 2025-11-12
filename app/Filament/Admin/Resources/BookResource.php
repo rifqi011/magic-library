@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources;
 
 use Filament\Forms;
+use Pages\ViewBook;
 use App\Models\Book;
 use Filament\Tables;
 use App\Models\Genre;
@@ -11,13 +12,14 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Illuminate\Support\Str;
 use Filament\Resources\Resource;
+use Illuminate\Support\Collection;
 use Filament\Forms\Components\Section;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\TernaryFilter;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Admin\Resources\BookResource\Pages;
 use App\Filament\Admin\Resources\BookResource\RelationManagers;
-use Pages\ViewBook;
 
 class BookResource extends Resource
 {
@@ -252,13 +254,60 @@ class BookResource extends Resource
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\DeleteAction::make()
+                        ->visible(function ($record) {
+                            if ($record->borrowingDetails()->exists()) {
+                                return false;
+                            } else {
+                                return true;
+                            }
+                        })
+
                 ])
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+                    Tables\Actions\DeleteBulkAction::make()
+                ->action(function (Collection $records) {
+                    $allowed = $records->filter(
+                        fn($record) => !$record->borrowingDetails()->exists()
+                    );
+
+                    $blocked = $records->diff($allowed);
+
+                    // If none can be deleted
+                    if ($allowed->isEmpty()) {
+                        Notification::make()
+                            ->title('Action Cancelled')
+                            ->body('No books can be deleted. Books with related borrowings cannot be deleted.')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    // Delete only allowed records
+                    $deleted = 0;
+                    foreach ($allowed as $record) {
+                        $record->delete();
+                        $deleted++;
+                    }
+
+                    // Show notification for blocked records
+                    if ($blocked->isNotEmpty()) {
+                        Notification::make()
+                            ->title('Partial Success')
+                            ->body("Successfully deleted {$deleted} book(s). Some books could not be deleted: " . $blocked->pluck('title')->join(', '))
+                            ->warning()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->title('Success')
+                            ->body("Successfully deleted {$deleted} book(s).")
+                            ->success()
+                            ->send();
+                    }
+                }),
+
+        ]);
     }
 
     public static function getRelations(): array
