@@ -36,18 +36,26 @@ class Borrowing extends Model
         });
 
         static::created(function ($borrowing) {
-            // Update stock after borrowing details are created
+            // Create history records for each book when borrowing is created
+            foreach ($borrowing->borrowingDetails as $detail) {
+                BookHistory::create([
+                    'book_id' => $detail->book_id,
+                    'member_id' => $borrowing->member_id,
+                    'borrow_date' => $borrowing->borrow_date,
+                    'return_date' => null,
+                    'status' => 'borrowed',
+                    'fine' => 0,
+                ]);
+            }
         });
 
         static::updating(function ($borrowing) {
-            // Calculate fine if status changes to late or returned
             if ($borrowing->isDirty('status') || $borrowing->isDirty('return_date')) {
                 $borrowing->calculateFine();
             }
         });
 
         static::deleting(function ($borrowing) {
-            // Return stock when borrowing is deleted (only if not returned yet)
             if ($borrowing->status !== 'returned') {
                 foreach ($borrowing->borrowingDetails as $detail) {
                     $book = $detail->book;
@@ -58,7 +66,7 @@ class Borrowing extends Model
             }
         });
     }
-
+    
     public function member()
     {
         return $this->belongsTo(Member::class);
@@ -112,18 +120,17 @@ class Borrowing extends Model
             foreach ($this->borrowingDetails as $detail) {
                 $book = $detail->book;
                 $book->increment('stock', $detail->quantity);
-            }
 
-            // Create history records
-            foreach ($this->borrowingDetails as $detail) {
-                BookHistory::create([
-                    'book_id' => $detail->book_id,
-                    'member_id' => $this->member_id,
-                    'borrow_date' => $this->borrow_date,
-                    'return_date' => $this->return_date,
-                    'status' => $this->status,
-                    'fine' => $this->fine / $this->borrowingDetails->count(), // Distribute fine equally
-                ]);
+                // Update existing history records
+                BookHistory::where('book_id', $detail->book_id)
+                    ->where('member_id', $this->member_id)
+                    ->where('borrow_date', $this->borrow_date)
+                    ->whereNull('return_date')
+                    ->update([
+                        'return_date' => $this->return_date,
+                        'status' => $this->status,
+                        'fine' => $this->fine / $this->borrowingDetails->count(),
+                    ]);
             }
         });
     }
