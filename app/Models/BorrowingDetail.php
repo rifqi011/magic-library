@@ -19,6 +19,10 @@ class BorrowingDetail extends Model
         parent::boot();
 
         static::created(function ($detail) {
+            if (app()->runningInConsole() && app()->runningUnitTests() === false) {
+                return;
+            }
+
             // Decrease stock when borrowing detail is created
             $borrowing = $detail->borrowing;
             // Only decrease if borrowing exists and not returned

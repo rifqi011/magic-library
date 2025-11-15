@@ -64,21 +64,32 @@ class Book extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            $slug = Str::slug($model->name);
-            $originalSlug = $slug;
-            $count = 1;
+            if (empty($model->slug)) {
+                $slug = Str::slug($model->title);
+                $originalSlug = $slug;
+                $count = 1;
 
-            while (static::where('slug', $slug)->exists()) {
-                $slug = "{$originalSlug}-{$count}";
-                $count++;
+                while (static::where('slug', $slug)->exists()) {
+                    $slug = "{$originalSlug}-{$count}";
+                    $count++;
+                }
+
+                $model->slug = $slug;
             }
-
-            $model->slug = $slug;
         });
 
         static::updating(function ($model) {
-            if ($model->isDirty('name')) {
-                $model->slug = Str::slug($model->name);
+            if ($model->isDirty('title')) {
+                $slug = Str::slug($model->title);
+                $originalSlug = $slug;
+                $count = 1;
+
+                while (static::where('slug', $slug)->where('id', '!=', $model->id)->exists()) {
+                    $slug = "{$originalSlug}-{$count}";
+                    $count++;
+                }
+
+                $model->slug = $slug;
             }
         });
     }

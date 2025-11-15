@@ -22,10 +22,19 @@ class DatabaseSeeder extends Seeder
             'role' => 'superadmin'
         ]);
 
+        User::factory()->create([
+            'name' => 'Diva Nur Anggraeni',
+            'email' => 'diva@example.com',
+            'password' => bcrypt('123456789'),
+            'role' => 'admin'
+        ]);
+
         $this->call([
             MemberSeeder::class,
             CategorySeeder::class,
-            GenreSeeder::class
+            GenreSeeder::class,
+            BookSeeder::class,
+            BorrowingSeeder::class
         ]);
     }
 }
